@@ -1,7 +1,6 @@
 # Empty Tools
 <div align="center">
-  <img src=".meta/preview_1.png" width="80%">
-  <img src=".meta/preview_2.png" width="20%">
+  <img src=".meta/preview_1.png" width="800">
 </div> <br>
 
 Blender3D addon adds tools for working with Empty objects. <br>
@@ -21,7 +20,7 @@ Helps organize the model structure after exporting from CAD programs.
 <b>Used in Modifiers.</b> A mode in which Empty objects are not removed if they are used in modifiers. <br>
 
 <div align="center">
-  <img src=".meta/preview_3.png" height="600">
+  <img src=".meta/preview_3.png" height="500">
 </div>
 
 - Convert to Collection <br>
