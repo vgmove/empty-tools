@@ -1,7 +1,7 @@
 # Empty Tools
 <div align="center">
   <img src=".meta/preview_1.png" width="80%">
-  <img src=".meta/preview_2.png" width="19%">
+  <img src=".meta/preview_2.png" width="20%">
 </div> <br>
 
 Blender3D addon adds tools for working with Empty objects. <br>
