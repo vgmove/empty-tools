@@ -20,7 +20,7 @@ Helps organize the model structure after exporting from CAD programs.
 <b>Used in Modifiers.</b> A mode in which Empty objects are not removed if they are used in modifiers. <br>
 
 <div align="center">
-  <img src=".meta/preview_3.png" height="500">
+  <img src=".meta/preview_2.png" height="500">
 </div>
 
 - Convert to Collection <br>
