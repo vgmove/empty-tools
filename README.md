@@ -1,7 +1,8 @@
 # Empty Tools
 <div align="center">
-  <img src=".meta/preview_1.png" width="800"/> <br>
-</div>
+  <img src=".meta/preview_1.png" width="80%">
+  <img src=".meta/preview_2.png" width="19%">
+</div> <br>
 
 Blender3D addon adds tools for working with Empty objects. <br>
 Helps organize the model structure after exporting from CAD programs.
@@ -10,18 +11,18 @@ Helps organize the model structure after exporting from CAD programs.
 - Cleaning the scene from Empty objects
 - Converting Empty objects into collections
 - Creating an Empty object based on the active object
-- Batch resizing Empty objects
+- Batch resizing Empty objects.
 
 ## How it works
-<div align="center">
-  <img src=".meta/preview_3.png" height="120"/>
-</div>
-
 - Remove Empty <br>
 <b>Blank Hierarchy.</b> Removes all Empty objects that have no child objects or whose children are all Empty objects, forming an empty branch of the hierarchy. <br>
 <b>Excess Empties.</b> Removes all Empty objects that have exactly one non-Empty child. <br>
 <b>Keep Structure.</b> A mode in which Empty objects are not removed if they have an Empty child, thereby leaving the scene structure untouched. <br>
 <b>Used in Modifiers.</b> A mode in which Empty objects are not removed if they are used in modifiers. <br>
+
+<div align="center">
+  <img src=".meta/preview_3.png" height="600">
+</div>
 
 - Convert to Collection <br>
 <b>Current Collection.</b> The new collection is created within the collection where the selected Empty objects are located. <br>
@@ -33,10 +34,6 @@ Helps organize the model structure after exporting from CAD programs.
 
 - Empty Size <br>
 Changes the size of all selected Empty objects. <br>
-
-<div align="center">
-  <img src=".meta/preview_3.png" width="800"/> <br>
-</div>
 
 ## Installation
 Download the .zip file and follow the [official instructions](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html) for installing addons (Install from Disk).
