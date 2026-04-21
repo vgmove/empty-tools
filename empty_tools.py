@@ -16,7 +16,7 @@
 
 bl_info = {
 	"name" : "Empty Tools",
-	"description" : "A set of additional functions to simplify interaction with scene elements.",
+	"description" : "A set of tools for working with empty objects.",
 	"author" : "VGmove",
 	"version" : (1, 0, 0),
 	"blender" : (5, 0, 0),
