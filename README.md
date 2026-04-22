@@ -13,25 +13,38 @@ Helps organize the model structure after exporting from CAD programs.
 - Batch resizing Empty objects
 
 ## How it works
-- Remove Empty <br>
-<b>Blank Hierarchy.</b> Removes all Empty objects that have no child objects or whose children are all Empty objects, forming an empty branch of the hierarchy. <br>
-<b>Excess Empties.</b> Removes all Empty objects that have exactly one non-Empty child. <br>
-<b>Keep Structure.</b> A mode in which Empty objects are not removed if they have an Empty child, thereby leaving the scene structure untouched. <br>
-<b>Used in Modifiers.</b> A mode in which Empty objects are not removed if they are used in modifiers. <br>
+<h3>Remove Empty</h3>
+
+- <b>Blank Hierarchy.</b><br>
+Removes all Empty objects that have no child objects or whose children are all Empty objects, forming an empty branch of the hierarchy.
+- <b>Excess Empties.</b><br>
+Removes all Empty objects that have exactly one non-Empty child.
+- <b>Keep Structure.</b><br>
+A mode in which Empty objects are not removed if they have an Empty child, thereby leaving the scene structure untouched.
+- <b>Used in Modifiers.</b><br>
+A mode in which Empty objects are not removed if they are used in modifiers.
 
 <div align="center">
   <img src=".meta/preview_2.png" height="500">
 </div>
 
-- Convert to Collection <br>
-<b>Current Collection.</b> The new collection is created within the collection where the selected Empty objects are located. <br>
-<b>Keep Parent.</b> The selected Empty object and all its children are moved into the new collection. <br>
+<h3>Convert to Collection</h3>
 
-- Create by Active Object <br>
-<b>Align Empty.</b> The created Empty object inherits the orientation of the active object. <br>
-<b>Name from Object.</b> The created Empty object takes the name of the active object. The default name is Group. <br>
+- <b>Current Collection.</b><br>
+The new collection is created within the collection where the selected Empty objects are located. <br>
+- <b>Keep Parent.</b><br>
+The selected Empty object and all its children are moved into the new collection. <br>
 
-- Empty Size <br>
+<h3>Create by Active Object</h3>
+
+- <b>Align Empty.</b><br>
+The created Empty object inherits the orientation of the active object. <br>
+- <b>Name from Object.</b><br>
+The created Empty object takes the name of the active object. The default name is Group. <br>
+
+<h3>Parameters</h3>
+
+- <b>Empty Size.</b><br>
 Changes the size of all selected Empty objects. <br>
 
 ## Installation
