@@ -10,7 +10,7 @@ Helps organize the model structure after exporting from CAD programs.
 - Cleaning the scene from Empty objects
 - Converting Empty objects into collections
 - Creating an Empty object based on the active object
-- Batch resizing Empty objects.
+- Batch resizing Empty objects
 
 ## How it works
 - Remove Empty <br>
