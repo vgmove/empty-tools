@@ -35,6 +35,10 @@ The new collection is created within the collection where the selected Empty obj
 - <b>Keep Parent.</b><br>
 The selected Empty object and all its children are moved into the new collection. <br>
 
+<div align="center">
+  <img src=".meta/preview_3.png" height="500">
+</div>
+
 <h3>Create by Active Object</h3>
 
 - <b>Align Empty.</b><br>
@@ -42,10 +46,18 @@ The created Empty object inherits the orientation of the active object. <br>
 - <b>Name from Object.</b><br>
 The created Empty object takes the name of the active object. The default name is Group. <br>
 
+<div align="center">
+  <img src=".meta/preview_4.png" height="500">
+</div>
+
 <h3>Parameters</h3>
 
 - <b>Empty Size.</b><br>
 Changes the size of all selected Empty objects. <br>
+
+<div align="center">
+  <img src=".meta/preview_5.webp" height="500">
+</div>
 
 ## Installation
 Download the .zip file and follow the [official instructions](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html) for installing addons (Install from Disk).
