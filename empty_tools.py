@@ -18,7 +18,7 @@ bl_info = {
 	"name" : "Empty Tools",
 	"description" : "A set of tools for working with empty objects.",
 	"author" : "VGmove",
-	"version" : (1, 0, 0),
+	"version" : (1, 0, 1),
 	"blender" : (5, 0, 0),
 	"location" : "View3D > Sidebar > Edit",
 	"category" : "Object"
@@ -247,24 +247,38 @@ class EmptyToolsCreate(Operator):
 			parent = parent.parent
 
 		filtered_selected = [
-			obj for obj in selected_objects 
+			obj for obj in selected_objects
 			if obj not in parents_to_exclude
 		]
 
-		# Create empty object
-		bpy.ops.object.empty_add(type='PLAIN_AXES')
-		empty_obj = context.active_object
-		empty_obj.empty_display_size = bpy.context.scene.property.empty_size
-
-		# Set name based on parameter
+		# Save original name
+		original_name = active_obj.name
 		if context.scene.property.name_from_object:
-			empty_obj.name = active_obj.name
+			active_obj.name = original_name + "_"
+
+		# Create Empty
+		empty_obj = bpy.data.objects.new("", None)
+		empty_obj.empty_display_type = 'PLAIN_AXES'
+		empty_obj.empty_display_size = context.scene.property.empty_size
+
+		# Set name
+		if context.scene.property.name_from_object:
+			empty_obj.name = original_name
 		else:
 			empty_obj.name = "Group"
-		
+
+		# Link to active object's collection
+		if active_obj.users_collection:
+			active_obj.users_collection[0].objects.link(empty_obj)
+		else:
+			context.scene.collection.objects.link(empty_obj)
+
+		# Make active
+		empty_obj.select_set(True)
+		context.view_layer.objects.active = empty_obj
+
 		# Create Matrix for location and rotation based on align_new_empty
 		loc, rot, scale = active_obj.matrix_world.decompose()
-		
 		if context.scene.property.align_new_empty:
 			empty_obj.matrix_world = Matrix.LocRotScale(loc, rot, (1, 1, 1))
 		else:
@@ -272,8 +286,8 @@ class EmptyToolsCreate(Operator):
 
 		# Find top-level objects (not children of other selected objects)
 		top_level_objects = [
-			obj for obj in filtered_selected 
-			if self.is_top_level(obj, filtered_selected) and obj != empty_obj
+			obj for obj in filtered_selected
+			if self.is_top_level(obj, filtered_selected)
 		]
 
 		# Parent selected objects to empty
@@ -288,13 +302,6 @@ class EmptyToolsCreate(Operator):
 			empty_obj.parent = original_parent
 			empty_obj.matrix_parent_inverse = original_parent.matrix_world.inverted()
 			empty_obj.matrix_world = world_matrix
-
-		# Move empty to active object's collection
-		if active_obj.users_collection:
-			for col in empty_obj.users_collection:
-				col.objects.unlink(empty_obj)
-			active_obj.users_collection[0].objects.link(empty_obj)
-		
 		return {"FINISHED"}
 	
 	def is_top_level(self, obj, objects):
