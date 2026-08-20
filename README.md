@@ -39,12 +39,18 @@ The selected Empty object and all its children are moved into the new collection
   <img src=".meta/preview_3.png" height="500">
 </div>
 
-<h3>Create by Active Object</h3>
+<h3>Create</h3>
+
+Active Object. Create empty by active object.
+Groups. Create empties for selected hierarchy groups.
 
 - <b>Align Empty.</b><br>
 The created Empty object inherits the orientation of the active object. <br>
 - <b>Name from Object.</b><br>
 The created Empty object takes the name of the active object. The default name is Group. <br>
+- <b>Name.</b><br>
+Custome name for new empty objects. <br>
+
 
 <div align="center">
   <img src=".meta/preview_4.png" height="500">
