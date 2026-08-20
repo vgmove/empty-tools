@@ -18,7 +18,7 @@ bl_info = {
 	"name" : "Empty Tools",
 	"description" : "A set of tools for working with empty objects.",
 	"author" : "VGmove",
-	"version" : (1, 0, 1),
+	"version" : (1, 0, 2),
 	"blender" : (5, 0, 0),
 	"location" : "View3D > Sidebar > Edit",
 	"category" : "Object"
@@ -88,6 +88,16 @@ class EmptyTools_properties(PropertyGroup):
 		default = True
 	)
 
+	create_empty_mode: EnumProperty(
+		name="Mode",
+		description="Choose how new empty objects are created.",
+		items=(
+			('ACTIVE_OBJECT', "Active Object", "Create empty by active object"),
+			('GROUPS', "Groups", "Create empties for selected hierarchy groups"),
+		),
+		default='ACTIVE_OBJECT'
+	)
+
 	align_new_empty: BoolProperty(
 		name="Align Empty",
 		description="Align new empty by local orientation active object.",
@@ -97,7 +107,13 @@ class EmptyTools_properties(PropertyGroup):
 	name_from_object: BoolProperty(
 		name="Name from Object",
 		description="Set name for new empty from active object. \nDefault name `Group`.",
-		default = False
+		default = True
+	)
+
+	empty_group_name: StringProperty(
+		name="Name",
+		description="Name for new empty objects.",
+		default="Group"
 	)
 
 	empty_size: FloatProperty(
@@ -110,54 +126,162 @@ class EmptyTools_properties(PropertyGroup):
 	)
 
 #Operators
-class EmptyToolsRemove(Operator):
-	bl_idname = "object.emptytools_remove"
-	bl_label = "Remove Empty"
-	bl_description = "Remove empty objects with specific conditions."
+class EmptyToolsCreateEmpty(Operator):
+	bl_idname = "object.emptytools_create"
+	bl_label = "Create Empty"
+	bl_description = "Create empty by active object or selected hierarchy groups."
 	bl_options = {"REGISTER", "UNDO"}
 
 	def execute(self, context):
-		# Check all object with modifiers and use empty
-		empty_in_modifiers = set()
-		if not context.scene.property.empty_in_modifiers:
-			for obj in context.scene.objects:
-				for mod in obj.modifiers:
-					for prop_name in ["object", "target", "mirror_object", "offset_object", "center_object"]:
-						if hasattr(mod, prop_name):
-							obj_ref = getattr(mod, prop_name)
-							if obj_ref and obj_ref.type == "EMPTY":
-								empty_in_modifiers.add(obj_ref)
+		props = context.scene.property
+		if props.create_empty_mode == 'GROUPS':
+			return self.create_groups(context)
+		return self.create_by_active_object(context)
 
-		changed = True
-		while changed:
-			changed = False
-			remove_queue = []
-			
-			empties = [obj for obj in context.selected_objects if obj.type == "EMPTY" and obj not in empty_in_modifiers]
-			for empty in empties:
-				children = empty.children
+	def create_by_active_object(self, context):
+		active_obj = context.active_object
+		if not active_obj:
+			return {"FINISHED"}
 
-				# Remove empty hierarchy
-				if context.scene.property.blank_hierarchy and not children:
-					remove_queue.append(empty)
-					changed = True
-					continue
+		original_parent = active_obj.parent
+		selected_objects = context.selected_objects
 
-				# Remove intermediate empty
-				if context.scene.property.excess_empties and len(children) == 1:
-					child = children[0]
-					if not context.scene.property.keep_structure or child.type != "EMPTY":
-						matrix = child.matrix_world.copy()
-						child.parent = empty.parent
-						child.matrix_world = matrix
-						remove_queue.append(empty)
-						changed = True
-						continue
+		# Exclude parent hierarchy from selection
+		parents_to_exclude = set()
+		parent = active_obj.parent
+		while parent:
+			parents_to_exclude.add(parent)
+			parent = parent.parent
 
-			if remove_queue:
-				bpy.data.batch_remove(remove_queue)
+		filtered_selected = [
+			obj for obj in selected_objects
+			if obj not in parents_to_exclude
+		]
+
+		# Save original name
+		original_name = active_obj.name
+		if context.scene.property.name_from_object:
+			active_obj.name = original_name + "_"
+
+		# Create Empty
+		empty_obj = bpy.data.objects.new("", None)
+		empty_obj.empty_display_type = 'PLAIN_AXES'
+		empty_obj.empty_display_size = context.scene.property.empty_size
+
+		# Set name
+		if context.scene.property.name_from_object:
+			empty_obj.name = original_name
+		else:
+			empty_obj.name = context.scene.property.empty_group_name or "Group"
+
+		# Link to active object's collection
+		if active_obj.users_collection:
+			active_obj.users_collection[0].objects.link(empty_obj)
+		else:
+			context.scene.collection.objects.link(empty_obj)
+
+		# Make active
+		empty_obj.select_set(True)
+		context.view_layer.objects.active = empty_obj
+
+		# Create Matrix for location and rotation based on align_new_empty
+		loc, rot, scale = active_obj.matrix_world.decompose()
+		if context.scene.property.align_new_empty:
+			empty_obj.matrix_world = Matrix.LocRotScale(loc, rot, (1, 1, 1))
+		else:
+			empty_obj.matrix_world = Matrix.Translation(loc)
+
+		# Find top-level objects (not children of other selected objects)
+		top_level_objects = [
+			obj for obj in filtered_selected
+			if self.is_top_level(obj, filtered_selected)
+		]
+
+		# Parent selected objects to empty
+		for obj in top_level_objects:
+			original_matrix = obj.matrix_world.copy()
+			obj.parent = empty_obj
+			obj.matrix_world = original_matrix
+
+		# Parent empty to original parent
+		if original_parent and original_parent != empty_obj:
+			world_matrix = empty_obj.matrix_world.copy()
+			empty_obj.parent = original_parent
+			empty_obj.matrix_parent_inverse = original_parent.matrix_world.inverted()
+			empty_obj.matrix_world = world_matrix
+		return {"FINISHED"}
+
+	def create_groups(self, context):
+		selected_objects = list(context.selected_objects)
+		if not selected_objects:
+			return {"FINISHED"}
+
+		# Only selected objects that are not descendants of another selected object
+		# participate as group members. This preserves existing selected sub-hierarchies.
+		top_level_objects = [
+			obj for obj in selected_objects
+			if self.is_top_level(obj, selected_objects)
+		]
+		if not top_level_objects:
+			return {"FINISHED"}
+
+		# Split selection into hierarchy groups by current parent.
+		groups = {}
+		for obj in top_level_objects:
+			groups.setdefault(obj.parent, []).append(obj)
+
+		created_empties = []
+		for group_parent, objects in groups.items():
+			if not objects:
+				continue
+
+			# Center of the group from world-space object origins.
+			center = sum((obj.matrix_world.translation for obj in objects), objects[0].matrix_world.translation.copy() * 0.0) / len(objects)
+
+			empty_obj = bpy.data.objects.new(context.scene.property.empty_group_name or "Group", None)
+			empty_obj.empty_display_type = 'PLAIN_AXES'
+			empty_obj.empty_display_size = context.scene.property.empty_size
+
+			# Keep the new empty in the same collection as the grouped objects.
+			link_source = objects[0]
+			if link_source.users_collection:
+				link_source.users_collection[0].objects.link(empty_obj)
+			else:
+				context.scene.collection.objects.link(empty_obj)
+
+			empty_obj.matrix_world = Matrix.Translation(center)
+
+			# Insert the new empty into the existing hierarchy without changing transforms.
+			if group_parent:
+				world_matrix = empty_obj.matrix_world.copy()
+				empty_obj.parent = group_parent
+				empty_obj.matrix_parent_inverse = group_parent.matrix_world.inverted()
+				empty_obj.matrix_world = world_matrix
+
+			for obj in objects:
+				original_matrix = obj.matrix_world.copy()
+				obj.parent = empty_obj
+				obj.matrix_world = original_matrix
+
+			created_empties.append(empty_obj)
+
+		# Select created empties and make the last one active.
+		for obj in context.selected_objects:
+			obj.select_set(False)
+		for empty_obj in created_empties:
+			empty_obj.select_set(True)
+		if created_empties:
+			context.view_layer.objects.active = created_empties[-1]
 
 		return {"FINISHED"}
+
+	def is_top_level(self, obj, objects):
+		parent = obj.parent
+		while parent:
+			if parent in objects:
+				return False
+			parent = parent.parent
+		return True
 
 class EmptyToolsConvert(Operator):
 	bl_idname = "object.emptytools_convert"
@@ -225,92 +349,54 @@ class EmptyToolsConvert(Operator):
 			obj = obj.parent
 		return d
 
-class EmptyToolsCreate(Operator):
-	bl_idname = "object.emptytools_create"
-	bl_label = "Create Empty"
-	bl_description = "Create empty by active object."
+class EmptyToolsRemove(Operator):
+	bl_idname = "object.emptytools_remove"
+	bl_label = "Remove Empty"
+	bl_description = "Remove empty objects with specific conditions."
 	bl_options = {"REGISTER", "UNDO"}
 
 	def execute(self, context):
-		active_obj = context.active_object
-		if not active_obj:
-			return {"FINISHED"}
+		# Check all object with modifiers and use empty
+		empty_in_modifiers = set()
+		if not context.scene.property.empty_in_modifiers:
+			for obj in context.scene.objects:
+				for mod in obj.modifiers:
+					for prop_name in ["object", "target", "mirror_object", "offset_object", "center_object"]:
+						if hasattr(mod, prop_name):
+							obj_ref = getattr(mod, prop_name)
+							if obj_ref and obj_ref.type == "EMPTY":
+								empty_in_modifiers.add(obj_ref)
 
-		original_parent = active_obj.parent
-		selected_objects = context.selected_objects
+		changed = True
+		while changed:
+			changed = False
+			remove_queue = []
+			
+			empties = [obj for obj in context.selected_objects if obj.type == "EMPTY" and obj not in empty_in_modifiers]
+			for empty in empties:
+				children = empty.children
 
-		# Exclude parent hierarchy from selection
-		parents_to_exclude = set()
-		parent = active_obj.parent
-		while parent:
-			parents_to_exclude.add(parent)
-			parent = parent.parent
+				# Remove empty hierarchy
+				if context.scene.property.blank_hierarchy and not children:
+					remove_queue.append(empty)
+					changed = True
+					continue
 
-		filtered_selected = [
-			obj for obj in selected_objects
-			if obj not in parents_to_exclude
-		]
+				# Remove intermediate empty
+				if context.scene.property.excess_empties and len(children) == 1:
+					child = children[0]
+					if not context.scene.property.keep_structure or child.type != "EMPTY":
+						matrix = child.matrix_world.copy()
+						child.parent = empty.parent
+						child.matrix_world = matrix
+						remove_queue.append(empty)
+						changed = True
+						continue
 
-		# Save original name
-		original_name = active_obj.name
-		if context.scene.property.name_from_object:
-			active_obj.name = original_name + "_"
+			if remove_queue:
+				bpy.data.batch_remove(remove_queue)
 
-		# Create Empty
-		empty_obj = bpy.data.objects.new("", None)
-		empty_obj.empty_display_type = 'PLAIN_AXES'
-		empty_obj.empty_display_size = context.scene.property.empty_size
-
-		# Set name
-		if context.scene.property.name_from_object:
-			empty_obj.name = original_name
-		else:
-			empty_obj.name = "Group"
-
-		# Link to active object's collection
-		if active_obj.users_collection:
-			active_obj.users_collection[0].objects.link(empty_obj)
-		else:
-			context.scene.collection.objects.link(empty_obj)
-
-		# Make active
-		empty_obj.select_set(True)
-		context.view_layer.objects.active = empty_obj
-
-		# Create Matrix for location and rotation based on align_new_empty
-		loc, rot, scale = active_obj.matrix_world.decompose()
-		if context.scene.property.align_new_empty:
-			empty_obj.matrix_world = Matrix.LocRotScale(loc, rot, (1, 1, 1))
-		else:
-			empty_obj.matrix_world = Matrix.Translation(loc)
-
-		# Find top-level objects (not children of other selected objects)
-		top_level_objects = [
-			obj for obj in filtered_selected
-			if self.is_top_level(obj, filtered_selected)
-		]
-
-		# Parent selected objects to empty
-		for obj in top_level_objects:
-			original_matrix = obj.matrix_world.copy()
-			obj.parent = empty_obj
-			obj.matrix_world = original_matrix
-
-		# Parent empty to original parent
-		if original_parent and original_parent != empty_obj:
-			world_matrix = empty_obj.matrix_world.copy()
-			empty_obj.parent = original_parent
-			empty_obj.matrix_parent_inverse = original_parent.matrix_world.inverted()
-			empty_obj.matrix_world = world_matrix
 		return {"FINISHED"}
-	
-	def is_top_level(self, obj, objects):
-		parent = obj.parent
-		while parent:
-			if parent in objects:
-				return False
-			parent = parent.parent
-		return True
 
 class EmptyToolsManager:
 	@staticmethod
@@ -332,6 +418,89 @@ class EMPTYTOOLS_PT_main(Panel):
 
 	def draw(self, context):
 		pass
+
+class EMPTYTOOLS_PT_create_empty(Panel):
+	bl_label = "Create Empty"
+	bl_parent_id = "EMPTYTOOLS_PT_main"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = "UI"
+	bl_category = "Edit"
+	bl_options = {"DEFAULT_CLOSED"}
+
+	@classmethod
+	def poll(cls, context):
+		return (context.active_object and bpy.context.object.mode == "OBJECT")
+
+	def draw(self, context):
+		layout = self.layout
+		col = layout.column()
+		col.use_property_split = False
+		col.use_property_decorate = False
+		props = context.scene.property
+
+		row = col.row()
+		split = row.split(factor=0.4)
+		split.alignment = "RIGHT"
+		split.label(text="Mode")
+		mode_col = split.column(align=True)
+		mode_col.prop_enum(props, "create_empty_mode", "ACTIVE_OBJECT")
+		mode_col.prop_enum(props, "create_empty_mode", "GROUPS")
+
+		if props.create_empty_mode == 'ACTIVE_OBJECT':
+			row = col.row()
+			split = row.split(factor=0.4)
+			split.alignment = "RIGHT"
+			split.label(text="Option")
+			col_right = split.column()
+			col_right.use_property_split = False
+			col_right.prop(props, "align_new_empty")
+
+		row = col.row()
+		split = row.split(factor=0.4)
+		split.alignment = "RIGHT"
+		split.label(text="Name")
+		col_right = split.column()
+		col_right.use_property_split = False
+
+		if props.create_empty_mode == 'ACTIVE_OBJECT':
+			col_right.prop(props, "name_from_object")
+			name_row = col_right.row()
+			name_row.enabled = not props.name_from_object
+			name_row.prop(props, "empty_group_name", text="")
+		else:
+			col_right.prop(props, "empty_group_name", text="")
+
+		col.operator(EmptyToolsCreateEmpty.bl_idname, icon="EMPTY_AXIS", text="Create")
+
+class EMPTYTOOLS_PT_convert(Panel):
+	bl_label = "Convert to Collection"
+	bl_parent_id = "EMPTYTOOLS_PT_main"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = "UI"
+	bl_category = "Edit"
+	bl_options = {"DEFAULT_CLOSED"}
+
+	@classmethod
+	def poll(cls, context):
+		return (context.active_object and 
+				bpy.context.object.mode == "OBJECT" and 
+				any(obj.type == 'EMPTY' for obj in context.selected_objects))
+
+	def draw(self, context):
+		layout = self.layout
+		col = layout.column()
+		col.use_property_split = True
+		col.use_property_decorate = False
+
+		row = col.row()
+		split = row.split(factor=0.4)
+		split.alignment = "RIGHT"
+		split.label(text="Options")
+		col_right = split.column()
+		col_right.use_property_split = False
+		col_right.prop(context.scene.property, "current_collection")
+		col_right.prop(context.scene.property, "keep_parent_empty")
+		col.operator(EmptyToolsConvert.bl_idname, icon="FILE_REFRESH", text="Convert")
 
 class EMPTYTOOLS_PT_remove(Panel):
 	bl_label = "Remove Empty"
@@ -379,64 +548,6 @@ class EMPTYTOOLS_PT_remove(Panel):
 		
 		col.operator(EmptyToolsRemove.bl_idname, icon="TRASH", text="Remove")
 
-class EMPTYTOOLS_PT_convert(Panel):
-	bl_label = "Convert to Collection"
-	bl_parent_id = "EMPTYTOOLS_PT_main"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = "UI"
-	bl_category = "Edit"
-	bl_options = {"DEFAULT_CLOSED"}
-
-	@classmethod
-	def poll(cls, context):
-		return (context.active_object and 
-				bpy.context.object.mode == "OBJECT" and 
-				any(obj.type == 'EMPTY' for obj in context.selected_objects))
-
-	def draw(self, context):
-		layout = self.layout
-		col = layout.column()
-		col.use_property_split = True
-		col.use_property_decorate = False
-
-		row = col.row()
-		split = row.split(factor=0.4)
-		split.alignment = "RIGHT"
-		split.label(text="Options")
-		col_right = split.column()
-		col_right.use_property_split = False
-		col_right.prop(context.scene.property, "current_collection")
-		col_right.prop(context.scene.property, "keep_parent_empty")
-		col.operator(EmptyToolsConvert.bl_idname, icon="FILE_REFRESH", text="Convert")
-
-class EMPTYTOOLS_PT_create(Panel):
-	bl_label = "Create by Active Object"
-	bl_parent_id = "EMPTYTOOLS_PT_main"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = "UI"
-	bl_category = "Edit"
-	bl_options = {"DEFAULT_CLOSED"}
-
-	@classmethod
-	def poll(cls, context):
-		return (context.active_object and bpy.context.object.mode == "OBJECT")
-
-	def draw(self, context):
-		layout = self.layout
-		col = layout.column()
-		col.use_property_split = False
-		col.use_property_decorate = False
-
-		row = col.row()
-		split = row.split(factor=0.4)
-		split.alignment = "RIGHT"
-		split.label(text="Options")
-		col_right = split.column()
-		col_right.use_property_split = False
-		col_right.prop(context.scene.property, "align_new_empty")
-		col_right.prop(context.scene.property, "name_from_object")
-		col.operator(EmptyToolsCreate.bl_idname, icon="EMPTY_AXIS", text="Create")
-
 class EMPTYTOOLS_PT_parameters(Panel):
 	bl_label = "Parameters"
 	bl_parent_id = "EMPTYTOOLS_PT_main"
@@ -462,11 +573,11 @@ classes = (
 	EmptyTools_properties,
 	EmptyToolsRemove,
 	EmptyToolsConvert,
-	EmptyToolsCreate,
+	EmptyToolsCreateEmpty,
 	EMPTYTOOLS_PT_main,
-	EMPTYTOOLS_PT_remove,
+	EMPTYTOOLS_PT_create_empty,
 	EMPTYTOOLS_PT_convert,
-	EMPTYTOOLS_PT_create,
+	EMPTYTOOLS_PT_remove,
 	EMPTYTOOLS_PT_parameters
 )
 
