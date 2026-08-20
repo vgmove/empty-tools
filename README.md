@@ -25,7 +25,7 @@ A mode in which Empty objects are not removed if they have an Empty child, there
 A mode in which Empty objects are not removed if they are used in modifiers.
 
 <div align="center">
-  <img src=".meta/preview_2.png" height="500">
+  <img src=".meta/preview_2.png" width="800">
 </div>
 
 <h3>Convert to Collection</h3>
@@ -36,7 +36,7 @@ The new collection is created within the collection where the selected Empty obj
 The selected Empty object and all its children are moved into the new collection. <br>
 
 <div align="center">
-  <img src=".meta/preview_3.png" height="500">
+  <img src=".meta/preview_3.png" width="800">
 </div>
 
 <h3>Create</h3>
@@ -53,7 +53,7 @@ Custome name for new empty objects. <br>
 
 
 <div align="center">
-  <img src=".meta/preview_4.png" height="500">
+  <img src=".meta/preview_4.png" width="800">
 </div>
 
 <h3>Parameters</h3>
@@ -62,7 +62,7 @@ Custome name for new empty objects. <br>
 Changes the size of all selected Empty objects. <br>
 
 <div align="center">
-  <img src=".meta/preview_5.webp" height="500">
+  <img src=".meta/preview_5.webp" width="800">
 </div>
 
 ## Installation
