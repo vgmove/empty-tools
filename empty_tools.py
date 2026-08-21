@@ -18,9 +18,9 @@ bl_info = {
 	"name" : "Empty Tools",
 	"description" : "A set of tools for working with empty objects.",
 	"author" : "VGmove",
-	"version" : (1, 0, 2),
+	"version" : (1, 0, 3),
 	"blender" : (5, 0, 0),
-	"location" : "View3D > Sidebar > Edit",
+	"location" : "View3D > Sidebar > Empty Tools",
 	"category" : "Object"
 }
 
@@ -405,31 +405,18 @@ class EmptyToolsManager:
 			obj.empty_display_size = bpy.context.scene.property.empty_size
 
 # UI
-class EMPTYTOOLS_PT_main(Panel):
-	bl_label = "Empty Tools"
+class EmptyToolsPanel:
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "UI"
-	bl_category = "Edit"
+	bl_category = "Empty Tools"
 	bl_options = {"DEFAULT_CLOSED"}
 
 	@classmethod
 	def poll(cls, context):
-		return (context.active_object and bpy.context.object.mode == "OBJECT")
+		return (context.active_object and context.object.mode == "OBJECT")
 
-	def draw(self, context):
-		pass
-
-class EMPTYTOOLS_PT_create_empty(Panel):
+class EMPTYTOOLS_PT_create_empty(EmptyToolsPanel, Panel):
 	bl_label = "Create Empty"
-	bl_parent_id = "EMPTYTOOLS_PT_main"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = "UI"
-	bl_category = "Edit"
-	bl_options = {"DEFAULT_CLOSED"}
-
-	@classmethod
-	def poll(cls, context):
-		return (context.active_object and bpy.context.object.mode == "OBJECT")
 
 	def draw(self, context):
 		layout = self.layout
@@ -472,13 +459,8 @@ class EMPTYTOOLS_PT_create_empty(Panel):
 
 		col.operator(EmptyToolsCreateEmpty.bl_idname, icon="EMPTY_AXIS", text="Create")
 
-class EMPTYTOOLS_PT_convert(Panel):
+class EMPTYTOOLS_PT_convert(EmptyToolsPanel, Panel):
 	bl_label = "Convert to Collection"
-	bl_parent_id = "EMPTYTOOLS_PT_main"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = "UI"
-	bl_category = "Edit"
-	bl_options = {"DEFAULT_CLOSED"}
 
 	@classmethod
 	def poll(cls, context):
@@ -502,13 +484,8 @@ class EMPTYTOOLS_PT_convert(Panel):
 		col_right.prop(context.scene.property, "keep_parent_empty")
 		col.operator(EmptyToolsConvert.bl_idname, icon="FILE_REFRESH", text="Convert")
 
-class EMPTYTOOLS_PT_remove(Panel):
+class EMPTYTOOLS_PT_remove(EmptyToolsPanel, Panel):
 	bl_label = "Remove Empty"
-	bl_parent_id = "EMPTYTOOLS_PT_main"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = "UI"
-	bl_category = "Edit"
-	bl_options = {"DEFAULT_CLOSED"}
 
 	@classmethod
 	def poll(cls, context):
@@ -548,13 +525,8 @@ class EMPTYTOOLS_PT_remove(Panel):
 		
 		col.operator(EmptyToolsRemove.bl_idname, icon="TRASH", text="Remove")
 
-class EMPTYTOOLS_PT_parameters(Panel):
+class EMPTYTOOLS_PT_parameters(EmptyToolsPanel, Panel):
 	bl_label = "Parameters"
-	bl_parent_id = "EMPTYTOOLS_PT_main"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = "UI"
-	bl_category = "Edit"
-	bl_options = {"DEFAULT_CLOSED"}
 
 	@classmethod
 	def poll(cls, context):
@@ -574,7 +546,6 @@ classes = (
 	EmptyToolsRemove,
 	EmptyToolsConvert,
 	EmptyToolsCreateEmpty,
-	EMPTYTOOLS_PT_main,
 	EMPTYTOOLS_PT_create_empty,
 	EMPTYTOOLS_PT_convert,
 	EMPTYTOOLS_PT_remove,
