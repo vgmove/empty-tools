@@ -69,4 +69,4 @@ Changes the size of all selected Empty objects. <br>
 Download the .zip file and follow the [official instructions](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html) for installing addons (Install from Disk).
 
 ## Download
-Link for download [last release](https://github.com/vgmove/empty-tools/releases/download/release_v1.0.0/empty_tools.zip).
+Link for download [last release](https://github.com/vgmove/empty-tools/releases/download/release_v1.0.2/empty_tools.zip).
